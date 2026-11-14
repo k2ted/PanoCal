@@ -35,6 +35,8 @@ struct PlannerView: View {
     let startMonth: Date
     let onSelect: (EKEvent) -> Void
     let onShowDay: (Date, [EKEvent]) -> Void
+    
+    var forExport = false   // set when drawing a PDF, which can't render scrolling views
 
     private struct PlannerBar {
         let event: EKEvent
@@ -167,14 +169,20 @@ struct PlannerView: View {
             let colW = (geo.size.width - outerPad * 2 - spacing * (count - 1)) / count
             let rowH = max(18, (geo.size.height - outerPad * 2 - headerH - rowGap * 31) / 31)
 
-            ScrollView(.vertical) {
-                HStack(alignment: .top, spacing: spacing) {
-                    ForEach(starts, id: \.self) { monthStart in
-                        monthColumn(monthStart, events: events, byDay: byDay, colW: colW,
-                                    rowH: rowH, headerH: headerH, rowGap: rowGap)
-                    }
+            let columns = HStack(alignment: .top, spacing: spacing) {
+                ForEach(starts, id: \.self) { monthStart in
+                    monthColumn(monthStart, events: events, byDay: byDay, colW: colW,
+                                rowH: rowH, headerH: headerH, rowGap: rowGap)
                 }
-                .padding(outerPad)
+            }
+            .padding(outerPad)
+
+            if forExport {
+                columns
+            } else {
+                ScrollView(.vertical) {
+                    columns
+                }
             }
         }
     }

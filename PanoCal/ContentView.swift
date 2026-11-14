@@ -7,6 +7,7 @@
 
 import SwiftUI
 import EventKit
+import UniformTypeIdentifiers
 
 private struct LoadKey: Hashable {
     let months: Int
@@ -48,6 +49,8 @@ struct ContentView: View {
     @State private var selectedDay: DayItem?
     @State private var highlightedDays: ClosedRange<Date>?
     @State private var highlightToken = UUID()
+    @State private var exportFile: PDFFile?
+    @State private var showExporter = false
 
     private static func currentMonthStart() -> Date {
         Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
@@ -83,6 +86,15 @@ struct ContentView: View {
         }
         .task(id: loadKey) { await calendar.load(start: startMonth, months: months) }
         .task { await calendar.startObservingChanges() }
+        .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
+            exportPDF()
+        }
+        .fileExporter(
+            isPresented: $showExporter,
+            document: exportFile ?? PDFFile(data: Data()),
+            contentType: .pdf,
+            defaultFilename: "PanoCal \(rangeTitle)"
+        ) { _ in }
         .sheet(item: $selected) { item in
             EventDetailView(event: item.event)
         }
@@ -144,6 +156,14 @@ struct ContentView: View {
                     pick(event)
                 }
             }
+            
+            Button {
+                exportPDF()
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+                    .labelStyle(.iconOnly)
+            }
+            .help("Export as PDF")
 
             Button {
                 shiftMonths(by: -1)
@@ -236,6 +256,92 @@ struct ContentView: View {
                     }
                 }
                 .padding()
+            }
+        }
+    }
+    
+    @MainActor
+    private func exportPDF() {
+        guard let data = PDFExport.makePDF(pages: exportPages()) else { return }
+        exportFile = PDFFile(data: data)
+        showExporter = true
+    }
+
+    // A page with a small heading above whatever view is being exported.
+    @MainActor
+    private func exportPage<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("PanoCal")
+                    .font(.headline)
+                Text(rangeTitle)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(Date().formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+
+            content()
+        }
+    }
+
+    @MainActor
+    private func exportPages() -> [AnyView] {
+        switch viewMode {
+        case "overview":
+            return [AnyView(exportPage {
+                OverviewView(
+                    calendar: calendar,
+                    months: months,
+                    startMonth: startMonth,
+                    onSelect: { _ in },
+                    onShowDay: { _, _ in }
+                )
+            })]
+        case "planner":
+            return [AnyView(exportPage {
+                PlannerView(
+                    calendar: calendar,
+                    months: months,
+                    startMonth: startMonth,
+                    onSelect: { _ in },
+                    onShowDay: { _, _ in },
+                    forExport: true
+                )
+            })]
+        default:
+            let weeks = calendar.weekStarts
+            let events = calendar.visibleEvents
+            let perPage = 6
+            let chunks = stride(from: 0, to: weeks.count, by: perPage).map {
+                Array(weeks[$0..<min($0 + perPage, weeks.count)])
+            }
+            return chunks.enumerated().map { pageIndex, chunk in
+                AnyView(exportPage {
+                    VStack(spacing: 4) {
+                        ForEach(Array(chunk.enumerated()), id: \.element) { i, weekStart in
+                            if let label = monthLabel(for: weekStart, index: pageIndex * perPage + i) {
+                                Text(label)
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 8)
+                            }
+                            WeekRow(
+                                weekStart: weekStart,
+                                events: events,
+                                onSelect: { _ in },
+                                onShowDay: { _, _ in }
+                            )
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(12)
+                })
             }
         }
     }

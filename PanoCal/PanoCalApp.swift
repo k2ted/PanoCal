@@ -41,6 +41,13 @@ struct PanoCalApp: App {
                 Toggle("Show Event Times", isOn: $showTimes)
                     .keyboardShortcut("e", modifiers: .command)
             }
+            
+            CommandGroup(replacing: .importExport) {
+                Button("Export as PDF…") {
+                    NotificationCenter.default.post(name: .exportRequested, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+            }
         }
     }
 }
