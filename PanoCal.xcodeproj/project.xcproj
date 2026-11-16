@@ -11,8 +11,21 @@
     ],
   },
   "files": [
-    { "kind": "folder", "path": "PanoCal", "target-membership": [ "PanoCal" ] },
     {
+      "kind": "folder",
+      "path": "PanoCal",
+      "target-membership": [
+        "PanoCal",
+      ],
+      "membership-exceptions": [
+        {
+          "target": "PanoCal",
+          "exclusions": [
+            "Info.plist",
+          ],
+        },
+      ],
+    }, {
       "kind": "group",
       "name": "Products",
       "children": [
@@ -52,9 +65,11 @@
         "ENABLE_RESOURCE_ACCESS_USB": "NO",
         "ENABLE_USER_SELECTED_FILES": "readwrite",
         "GENERATE_INFOPLIST_FILE": "YES",
+        "INFOPLIST_FILE": "PanoCal/Info.plist",
         "INFOPLIST_KEY_CFBundleDisplayName": "PanoCal",
         "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.productivity",
         "INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription": "This app shows your upcoming events in a visual overview.",
+        "INFOPLIST_KEY_NSRemindersFullAccessUsageDescription": "PanoCal shows your reminders alongside your events.",
         "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]": "YES",
         "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]": "YES",
         "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]": "YES",

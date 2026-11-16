@@ -16,8 +16,10 @@ class CalendarStore {
     var calendars: [EKCalendar] = []
     var weekStarts: [Date] = []
     var accessDenied = false
+    var remindersDenied = false
     @ObservationIgnored private var currentMonths = 3
     @ObservationIgnored private var currentStart = Date()
+    @ObservationIgnored private var currentShowReminders = false
     @ObservationIgnored private var searchCache: [EKEvent]? = nil
 
     // How far either side of today the search looks, in years.
@@ -58,8 +60,48 @@ class CalendarStore {
         for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
             searchCache = nil
             store.refreshSourcesIfNecessary()
-            await load(start: currentStart, months: currentMonths)
+            await load(start: currentStart, months: currentMonths, showReminders: currentShowReminders)
         }
+    }
+
+    // Incomplete reminders that have a due date, turned into stand-in events so every view can draw them.
+    private func reminderItems(from start: Date?, to end: Date) async -> [EKEvent] {
+        let predicate = store.predicateForIncompleteReminders(
+            withDueDateStarting: start,
+            ending: end,
+            calendars: nil
+        )
+        let reminders: [EKReminder] = await withCheckedContinuation { continuation in
+            _ = store.fetchReminders(matching: predicate) { found in
+                continuation.resume(returning: found ?? [])
+            }
+        }
+
+        let cal = Calendar.current
+        var items: [EKEvent] = []
+        for reminder in reminders {
+            guard let components = reminder.dueDateComponents,
+                  let due = cal.date(from: components) else { continue }
+
+            let hasTime = components.hour != nil
+            let item = EKEvent(eventStore: store)
+            item.calendar = nil
+            item.title = "○ " + (reminder.title ?? "Reminder")
+            item.isAllDay = !hasTime
+            item.startDate = hasTime ? due : cal.startOfDay(for: due)
+            item.endDate = item.startDate
+
+            var notes = "Reminder"
+            if let list = reminder.calendar?.title {
+                notes += " · " + list
+            }
+            if let extra = reminder.notes, !extra.isEmpty {
+                notes += "\n" + extra
+            }
+            item.notes = notes
+            items.append(item)
+        }
+        return items
     }
 
     // Every event in the search span, fetched a year at a time and remembered until the calendar changes.
@@ -92,13 +134,20 @@ class CalendarStore {
             if Task.isCancelled { return all }
         }
 
+        if currentShowReminders && !remindersDenied {
+            all += await reminderItems(from: nil, to: to)
+        }
+
         searchCache = all
         return all
     }
 
-    func load(start: Date, months: Int) async {
+    func load(start: Date, months: Int, showReminders: Bool) async {
+        if showReminders != currentShowReminders { searchCache = nil }
         currentStart = start
         currentMonths = months
+        currentShowReminders = showReminders
+
         do {
             let granted = try await store.requestFullAccessToEvents()
             guard granted else {
@@ -119,7 +168,20 @@ class CalendarStore {
             let end = cal.date(byAdding: .month, value: months, to: monthStart) ?? monthStart
 
             let predicate = store.predicateForEvents(withStart: firstWeek, end: end, calendars: nil)
-            events = store.events(matching: predicate).sorted { $0.startDate < $1.startDate }
+            var found = store.events(matching: predicate)
+
+            if showReminders {
+                let allowed = (try? await store.requestFullAccessToReminders()) ?? false
+                remindersDenied = !allowed
+                if allowed {
+                    found += await reminderItems(from: firstWeek, to: end)
+                }
+            } else {
+                remindersDenied = false
+            }
+            if Task.isCancelled { return }
+
+            events = found.sorted { $0.startDate < $1.startDate }
 
             var weeks: [Date] = []
             var current = firstWeek

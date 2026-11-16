@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 private struct LoadKey: Hashable {
     let months: Int
     let start: Date
+    let reminders: Bool
 }
 
 // Lets a left or right swipe change the month on touch screens. Does nothing on Mac.
@@ -41,6 +42,7 @@ struct ContentView: View {
     @AppStorage("selectedMonths") private var months = 12
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("viewMode") private var viewMode = "overview"
+    @AppStorage("showReminders") private var showReminders = false
     @State private var startMonth = ContentView.currentMonthStart()
     @State private var showSidebar = false
     @State private var showSearch = false
@@ -57,7 +59,7 @@ struct ContentView: View {
     }
 
     private var loadKey: LoadKey {
-        LoadKey(months: months, start: startMonth)
+        LoadKey(months: months, start: startMonth, reminders: showReminders)
     }
 
     var body: some View {
@@ -84,7 +86,9 @@ struct ContentView: View {
                 clearHighlightSoon()
             }
         }
-        .task(id: loadKey) { await calendar.load(start: startMonth, months: months) }
+        .task(id: loadKey) {
+            await calendar.load(start: startMonth, months: months, showReminders: showReminders)
+        }
         .task { await calendar.startObservingChanges() }
         .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
             exportPDF()

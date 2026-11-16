@@ -320,6 +320,9 @@ struct PlannerDayCell: View {
             return title
         }
         let time = event.startDate.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())
+        if title.hasPrefix("○ ") {
+            return "○ \(time) " + String(title.dropFirst(2))
+        }
         return "\(time) \(title)"
     }
 

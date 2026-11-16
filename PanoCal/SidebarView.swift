@@ -19,6 +19,7 @@ struct SidebarView: View {
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("viewMode") private var viewMode = "calendar"
     @AppStorage("collapsedAccounts") private var collapsedRaw = ""
+    @AppStorage("showReminders") private var showReminders = false
 
     private struct AccountGroup: Identifiable {
         let name: String
@@ -171,6 +172,13 @@ struct SidebarView: View {
                 Text("Display")
                     .font(.headline)
                 Toggle("Show event times", isOn: $showTimes)
+
+                Toggle("Show reminders", isOn: $showReminders)
+                if showReminders && calendar.remindersDenied {
+                    Text("Access to Reminders was denied. You can allow it in Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Picker("Appearance", selection: $appearance) {
                     Text("System").tag("system")

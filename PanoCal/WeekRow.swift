@@ -248,6 +248,9 @@ struct DayCell: View {
             return title
         }
         let time = event.startDate.formatted(.dateTime.hour().minute())
+        if title.hasPrefix("○ ") {
+            return "○ \(time) " + String(title.dropFirst(2))
+        }
         return "\(time) \(title)"
     }
 
