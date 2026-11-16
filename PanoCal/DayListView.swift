@@ -41,11 +41,10 @@ struct DayListView: View {
                     EventDetailView(event: item.element)
                 } label: {
                     HStack(spacing: 8) {
-                        Circle()
-                            .fill(color(for: item.element))
-                            .frame(width: 10, height: 10)
+                        EventDot(event: item.element, color: color(for: item.element))
                         VStack(alignment: .leading) {
-                            Text(item.element.title ?? "Untitled")
+                            Text(item.element.cleanTitle)
+                                .lineLimit(1)
                             Text(timeText(for: item.element))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

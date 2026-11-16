@@ -278,13 +278,7 @@ struct DayCell: View {
                     .padding(.leading, 6)
                     .padding(.trailing, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(eventColor.opacity(0.25))
-                    .overlay(alignment: .leading) {
-                        Rectangle()
-                            .fill(eventColor)
-                            .frame(width: 3)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .eventChipStyle(isReminder: item.element.isReminderItem, color: eventColor, radius: 3, tint: 0.25, stripe: 3)
                     .onTapGesture { onSelect(item.element) }
             }
 

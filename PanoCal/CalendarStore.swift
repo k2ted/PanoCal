@@ -87,13 +87,14 @@ class CalendarStore {
             let item = EKEvent(eventStore: store)
             item.calendar = nil
             item.title = "○ " + (reminder.title ?? "Reminder")
+            item.url = URL(string: "panocal-reminder://item")
             item.isAllDay = !hasTime
             item.startDate = hasTime ? due : cal.startOfDay(for: due)
             item.endDate = item.startDate
 
             var notes = "Reminder"
             if let list = reminder.calendar?.title {
-                notes += " · " + list
+                notes = "Reminder list: " + list
             }
             if let extra = reminder.notes, !extra.isEmpty {
                 notes += "\n" + extra

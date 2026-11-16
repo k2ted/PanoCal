@@ -411,21 +411,23 @@ private struct OverviewDayCell: View {
             .padding(.trailing, 1)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: 12)
-            .background(color.opacity(0.3))
-            .overlay(alignment: .leading) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 2)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 2))
+            .eventChipStyle(isReminder: event.isReminderItem, color: color, radius: 2, tint: 0.3, stripe: 2)
             .onTapGesture { onSelect(event) }
     }
 
+    @ViewBuilder
     private func bar(_ event: EKEvent) -> some View {
-        Capsule()
-            .fill(overviewColor(for: event))
-            .frame(height: 3)
-            .padding(.horizontal, 2)
+        if event.isReminderItem {
+            Capsule()
+                .strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                .frame(height: 3)
+                .padding(.horizontal, 2)
+        } else {
+            Capsule()
+                .fill(overviewColor(for: event))
+                .frame(height: 3)
+                .padding(.horizontal, 2)
+        }
     }
 
     var body: some View {

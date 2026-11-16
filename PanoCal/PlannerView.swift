@@ -335,13 +335,7 @@ struct PlannerDayCell: View {
             .padding(.trailing, 2)
             .frame(maxWidth: width > 300 ? CGFloat(180) : CGFloat.infinity, alignment: .leading)
             .frame(height: min(height - 6, 18))
-            .background(color.opacity(0.3))
-            .overlay(alignment: .leading) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 2)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .eventChipStyle(isReminder: event.isReminderItem, color: color, radius: 3, tint: 0.3, stripe: 2)
             .onTapGesture { onSelect(event) }
     }
 

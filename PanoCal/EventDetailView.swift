@@ -46,10 +46,8 @@ struct EventDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(eventColor)
-                    .frame(width: 12, height: 12)
-                Text(event.title ?? "Untitled")
+                EventDot(event: event, color: eventColor, size: 12)
+                Text(event.cleanTitle)
                     .font(.title2.bold())
             }
 

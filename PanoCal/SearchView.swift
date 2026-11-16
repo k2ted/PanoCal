@@ -127,11 +127,9 @@ struct SearchView: View {
             onPick(hit.event)
         } label: {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(color(for: hit.event))
-                    .frame(width: 10, height: 10)
+                EventDot(event: hit.event, color: color(for: hit.event))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(hit.event.title ?? "Untitled")
+                    Text(hit.event.cleanTitle)
                         .lineLimit(1)
                     if let note = hit.note {
                         Text(note)
