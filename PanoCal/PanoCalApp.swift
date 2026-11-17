@@ -9,8 +9,19 @@ import SwiftUI
 
 @main
 struct PanoCalApp: App {
-    @AppStorage("selectedMonths") private var months = 12
+    @AppStorage("viewMode") private var viewMode = "overview"
+    @AppStorage("months.overview") private var overviewMonths = 12
+    @AppStorage("months.planner") private var plannerMonths = 6
+    @AppStorage("months.calendar") private var calendarMonths = 3
     @AppStorage("showEventTimes") private var showTimes = false
+    
+    private func setMonths(_ value: Int) {
+        switch viewMode {
+        case "planner": plannerMonths = value
+        case "calendar": calendarMonths = value
+        default: overviewMonths = value
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -19,20 +30,20 @@ struct PanoCalApp: App {
         .commands {
             CommandMenu("Display") {
                 if oneMonthEnabled {
-                    Button("1 Month") { months = 1 }
+                    Button("1 Month") { setMonths(1) }
                         .keyboardShortcut("1", modifiers: .command)
-                    Button("3 Months") { months = 3 }
+                    Button("3 Months") { setMonths(3) }
                         .keyboardShortcut("2", modifiers: .command)
-                    Button("6 Months") { months = 6 }
+                    Button("6 Months") { setMonths(6) }
                         .keyboardShortcut("3", modifiers: .command)
-                    Button("12 Months") { months = 12 }
+                    Button("12 Months") { setMonths(12) }
                         .keyboardShortcut("4", modifiers: .command)
                 } else {
-                    Button("3 Months") { months = 3 }
+                    Button("3 Months") { setMonths(3) }
                         .keyboardShortcut("1", modifiers: .command)
-                    Button("6 Months") { months = 6 }
+                    Button("6 Months") { setMonths(6) }
                         .keyboardShortcut("2", modifiers: .command)
-                    Button("12 Months") { months = 12 }
+                    Button("12 Months") { setMonths(12) }
                         .keyboardShortcut("3", modifiers: .command)
                 }
 

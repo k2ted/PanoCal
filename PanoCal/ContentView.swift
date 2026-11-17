@@ -39,7 +39,9 @@ private struct SwipeModifier: ViewModifier {
 
 struct ContentView: View {
     @State private var calendar = CalendarStore()
-    @AppStorage("selectedMonths") private var months = 12
+    @AppStorage("months.overview") private var overviewMonths = 12
+    @AppStorage("months.planner") private var plannerMonths = 6
+    @AppStorage("months.calendar") private var calendarMonths = 3
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("viewMode") private var viewMode = "overview"
     @AppStorage("showReminders") private var showReminders = false
@@ -57,6 +59,29 @@ struct ContentView: View {
     private static func currentMonthStart() -> Date {
         Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
     }
+    
+    // The range for whichever view is showing.
+    private var months: Int {
+        switch viewMode {
+        case "planner": return plannerMonths
+        case "calendar": return calendarMonths
+        default: return overviewMonths
+        }
+    }
+
+    // Lets the sidebar's range picker change the current view's range.
+    private var monthsBinding: Binding<Int> {
+        Binding(
+            get: { months },
+            set: { newValue in
+                switch viewMode {
+                case "planner": plannerMonths = newValue
+                case "calendar": calendarMonths = newValue
+                default: overviewMonths = newValue
+                }
+            }
+        )
+    }
 
     private var loadKey: LoadKey {
         LoadKey(months: months, start: startMonth, reminders: showReminders)
@@ -65,7 +90,7 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             if showSidebar {
-                SidebarView(calendar: calendar, months: $months)
+                SidebarView(calendar: calendar, months: monthsBinding)
                     .frame(width: 280)
                     .transition(.move(edge: .leading))
                 Divider()
@@ -76,7 +101,11 @@ struct ContentView: View {
         .environment(\.highlightedDays, highlightedDays)
         .onAppear {
             AppearanceSetting.apply(appearance)
-            if months == 1 && !oneMonthEnabled { months = 3 }
+            if !oneMonthEnabled {
+                if overviewMonths == 1 { overviewMonths = 3 }
+                if plannerMonths == 1 { plannerMonths = 3 }
+                if calendarMonths == 1 { calendarMonths = 3 }
+            }
         }
         .onChange(of: appearance) { _, newValue in
             AppearanceSetting.apply(newValue)
