@@ -38,6 +38,7 @@ struct WeekRow: View {
     let events: [EKEvent]
     let onSelect: (EKEvent) -> Void
     let onShowDay: (Date, [EKEvent]) -> Void
+    var minRowHeight: CGFloat = 80
 
     private struct Bar {
         let event: EKEvent
@@ -63,10 +64,12 @@ struct WeekRow: View {
     var body: some View {
         let layout = makeLayout()
         let dayList = days
+        let safeHeight: CGFloat = minRowHeight.isFinite ? min(max(minRowHeight, 0), 2000) : 80
+        let rowsFit = max(WeekMetrics.maxRows, Int((safeHeight - 30) / 20))
 
         HStack(alignment: .top, spacing: WeekMetrics.columnSpacing) {
             ForEach(0..<7, id: \.self) { col in
-                let limit = max(1, WeekMetrics.maxRows - layout.laneCount)
+                let limit = max(1, rowsFit - layout.laneCount)
                 let shown = Array(sortedForDay(layout.singlesByDay[col]).prefix(limit))
                 let overflow = layout.allByDay[col].count - layout.barCountByDay[col] - shown.count
 
@@ -77,7 +80,8 @@ struct WeekRow: View {
                     laneCount: layout.laneCount,
                     allEvents: sortedForDay(layout.allByDay[col]),
                     onSelect: onSelect,
-                    onShowDay: onShowDay
+                    onShowDay: onShowDay,
+                    minHeight: minRowHeight
                 )
             }
         }
@@ -212,23 +216,23 @@ struct DayCell: View {
     let allEvents: [EKEvent]
     let onSelect: (EKEvent) -> Void
     let onShowDay: (Date, [EKEvent]) -> Void
+    var minHeight: CGFloat = 80
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.highlightedDays) private var highlightedDays
     @AppStorage("showEventTimes") private var showTimes = false
 
     private var isToday: Bool {
         Calendar.current.isDateInToday(day)
     }
-    
-    @Environment(\.highlightedDays) private var highlightedDays
+
+    private var isEvenMonth: Bool {
+        Calendar.current.component(.month, from: day) % 2 == 0
+    }
 
     private var isHighlighted: Bool {
         guard let highlightedDays else { return false }
         return highlightedDays.contains(Calendar.current.startOfDay(for: day))
-    }
-
-    private var isEvenMonth: Bool {
-        Calendar.current.component(.month, from: day) % 2 == 0
     }
 
     private var headerText: String {
@@ -278,7 +282,8 @@ struct DayCell: View {
                     .padding(.leading, 6)
                     .padding(.trailing, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .eventChipStyle(isReminder: item.element.isReminderItem, color: eventColor, radius: 3, tint: 0.25, stripe: 3)
+                    .eventChipStyle(isReminder: item.element.isReminderItem, color: eventColor,
+                                    radius: 3, tint: 0.25, stripe: 3)
                     .onTapGesture { onSelect(item.element) }
             }
 
@@ -289,7 +294,7 @@ struct DayCell: View {
                     .onTapGesture { onShowDay(day, allEvents) }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: max(minHeight - WeekMetrics.cellPadding * 2, 0), alignment: .topLeading)
         .padding(WeekMetrics.cellPadding)
         .background(
             isHighlighted

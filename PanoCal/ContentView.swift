@@ -41,7 +41,6 @@ struct ContentView: View {
     @State private var calendar = CalendarStore()
     @AppStorage("months.overview") private var overviewMonths = 12
     @AppStorage("months.planner") private var plannerMonths = 6
-    @AppStorage("months.calendar") private var calendarMonths = 3
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("viewMode") private var viewMode = "overview"
     @AppStorage("showReminders") private var showReminders = false
@@ -59,12 +58,12 @@ struct ContentView: View {
     private static func currentMonthStart() -> Date {
         Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
     }
-    
-    // The range for whichever view is showing.
+
+    // The range for whichever view is showing. Calendar is always a single month.
     private var months: Int {
         switch viewMode {
         case "planner": return plannerMonths
-        case "calendar": return calendarMonths
+        case "calendar": return 1
         default: return overviewMonths
         }
     }
@@ -76,7 +75,7 @@ struct ContentView: View {
             set: { newValue in
                 switch viewMode {
                 case "planner": plannerMonths = newValue
-                case "calendar": calendarMonths = newValue
+                case "calendar": break
                 default: overviewMonths = newValue
                 }
             }
@@ -104,7 +103,6 @@ struct ContentView: View {
             if !oneMonthEnabled {
                 if overviewMonths == 1 { overviewMonths = 3 }
                 if plannerMonths == 1 { plannerMonths = 3 }
-                if calendarMonths == 1 { calendarMonths = 3 }
             }
         }
         .onChange(of: appearance) { _, newValue in
@@ -189,7 +187,7 @@ struct ContentView: View {
                     pick(event)
                 }
             }
-            
+
             Button {
                 exportPDF()
             } label: {
@@ -268,113 +266,30 @@ struct ContentView: View {
             )
             .id(loadKey)
         } else {
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(Array(calendar.weekStarts.enumerated()), id: \.element) { index, weekStart in
-                        VStack(spacing: 4) {
-                            if let label = monthLabel(for: weekStart, index: index) {
-                                Text(label)
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
-                            }
+            GeometryReader { geo in
+                let weeks = calendar.weekStarts
+                let gap: CGFloat = 4
+                let pad: CGFloat = 12
+                let count = CGFloat(max(weeks.count, 1))
+                let rawH = (geo.size.height - pad * 2 - gap * (count - 1) - 2) / count
+                let rowH = rawH.isFinite ? max(80, rawH) : 80
+
+                ScrollView {
+                    VStack(spacing: gap) {
+                        ForEach(weeks, id: \.self) { weekStart in
                             WeekRow(
                                 weekStart: weekStart,
                                 events: calendar.visibleEvents,
                                 onSelect: { selected = EventItem(event: $0) },
-                                onShowDay: { day, events in selectedDay = DayItem(day: day, events: events) }
+                                onShowDay: { day, events in selectedDay = DayItem(day: day, events: events) },
+                                minRowHeight: rowH
                             )
+                            .id(weekStart)
                         }
-                        .id(weekStart)
                     }
+                    .padding(pad)
                 }
-                .padding()
-            }
-        }
-    }
-    
-    @MainActor
-    private func exportPDF() {
-        guard let data = PDFExport.makePDF(pages: exportPages()) else { return }
-        exportFile = PDFFile(data: data)
-        showExporter = true
-    }
-
-    // A page with a small heading above whatever view is being exported.
-    @MainActor
-    private func exportPage<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("PanoCal")
-                    .font(.headline)
-                Text(rangeTitle)
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(Date().formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
-
-            content()
-        }
-    }
-
-    @MainActor
-    private func exportPages() -> [AnyView] {
-        switch viewMode {
-        case "overview":
-            return [AnyView(exportPage {
-                OverviewView(
-                    calendar: calendar,
-                    months: months,
-                    startMonth: startMonth,
-                    onSelect: { _ in },
-                    onShowDay: { _, _ in }
-                )
-            })]
-        case "planner":
-            return [AnyView(exportPage {
-                PlannerView(
-                    calendar: calendar,
-                    months: months,
-                    startMonth: startMonth,
-                    onSelect: { _ in },
-                    onShowDay: { _, _ in },
-                    forExport: true
-                )
-            })]
-        default:
-            let weeks = calendar.weekStarts
-            let events = calendar.visibleEvents
-            let perPage = 6
-            let chunks = stride(from: 0, to: weeks.count, by: perPage).map {
-                Array(weeks[$0..<min($0 + perPage, weeks.count)])
-            }
-            return chunks.enumerated().map { pageIndex, chunk in
-                AnyView(exportPage {
-                    VStack(spacing: 4) {
-                        ForEach(Array(chunk.enumerated()), id: \.element) { i, weekStart in
-                            if let label = monthLabel(for: weekStart, index: pageIndex * perPage + i) {
-                                Text(label)
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
-                            }
-                            WeekRow(
-                                weekStart: weekStart,
-                                events: events,
-                                onSelect: { _ in },
-                                onShowDay: { _, _ in }
-                            )
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(12)
-                })
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
     }
@@ -431,17 +346,83 @@ struct ContentView: View {
         }
     }
 
-    private func monthLabel(for weekStart: Date, index: Int) -> String? {
-        let cal = Calendar.current
-        for offset in 0..<7 {
-            let day = cal.date(byAdding: .day, value: offset, to: weekStart)!
-            if cal.component(.day, from: day) == 1 {
-                return day.formatted(.dateTime.month(.wide).year())
+    @MainActor
+    private func exportPDF() {
+        guard let data = PDFExport.makePDF(pages: exportPages()) else { return }
+        exportFile = PDFFile(data: data)
+        showExporter = true
+    }
+
+    // A page with a small heading above whatever view is being exported.
+    @MainActor
+    private func exportPage<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("PanoCal")
+                    .font(.headline)
+                Text(rangeTitle)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(Date().formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+
+            content()
         }
-        if index == 0 {
-            return weekStart.formatted(.dateTime.month(.wide).year())
+    }
+
+    @MainActor
+    private func exportPages() -> [AnyView] {
+        switch viewMode {
+        case "overview":
+            return [AnyView(exportPage {
+                OverviewView(
+                    calendar: calendar,
+                    months: months,
+                    startMonth: startMonth,
+                    onSelect: { _ in },
+                    onShowDay: { _, _ in }
+                )
+            })]
+        case "planner":
+            return [AnyView(exportPage {
+                PlannerView(
+                    calendar: calendar,
+                    months: months,
+                    startMonth: startMonth,
+                    onSelect: { _ in },
+                    onShowDay: { _, _ in },
+                    forExport: true
+                )
+            })]
+        default:
+            return [AnyView(exportPage {
+                GeometryReader { geo in
+                    let weeks = calendar.weekStarts
+                    let gap: CGFloat = 4
+                    let count = CGFloat(max(weeks.count, 1))
+                    let rawH = (geo.size.height - 24 - gap * (count - 1)) / count
+                    let rowH = rawH.isFinite ? max(60, rawH) : 60
+
+                    VStack(spacing: gap) {
+                        ForEach(weeks, id: \.self) { weekStart in
+                            WeekRow(
+                                weekStart: weekStart,
+                                events: calendar.visibleEvents,
+                                onSelect: { _ in },
+                                onShowDay: { _, _ in },
+                                minRowHeight: rowH
+                            )
+                        }
+                    }
+                    .padding(12)
+                }
+            })]
         }
-        return nil
     }
 }

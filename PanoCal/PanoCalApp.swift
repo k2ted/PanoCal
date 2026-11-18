@@ -12,13 +12,13 @@ struct PanoCalApp: App {
     @AppStorage("viewMode") private var viewMode = "overview"
     @AppStorage("months.overview") private var overviewMonths = 12
     @AppStorage("months.planner") private var plannerMonths = 6
-    @AppStorage("months.calendar") private var calendarMonths = 3
     @AppStorage("showEventTimes") private var showTimes = false
-    
+
+    // Calendar is always a single month, so the range shortcuts do nothing there.
     private func setMonths(_ value: Int) {
         switch viewMode {
         case "planner": plannerMonths = value
-        case "calendar": calendarMonths = value
+        case "calendar": break
         default: overviewMonths = value
         }
     }
@@ -28,6 +28,13 @@ struct PanoCalApp: App {
             ContentView()
         }
         .commands {
+            CommandGroup(replacing: .importExport) {
+                Button("Export as PDF…") {
+                    NotificationCenter.default.post(name: .exportRequested, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+            }
+
             CommandMenu("Display") {
                 if oneMonthEnabled {
                     Button("1 Month") { setMonths(1) }
@@ -51,13 +58,6 @@ struct PanoCalApp: App {
 
                 Toggle("Show Event Times", isOn: $showTimes)
                     .keyboardShortcut("e", modifiers: .command)
-            }
-            
-            CommandGroup(replacing: .importExport) {
-                Button("Export as PDF…") {
-                    NotificationCenter.default.post(name: .exportRequested, object: nil)
-                }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
             }
         }
     }

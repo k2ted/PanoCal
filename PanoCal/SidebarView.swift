@@ -16,10 +16,13 @@ struct SidebarView: View {
     @Binding var months: Int
 
     @AppStorage("showEventTimes") private var showTimes = false
-    @AppStorage("appearance") private var appearance = "system"
-    @AppStorage("viewMode") private var viewMode = "calendar"
-    @AppStorage("collapsedAccounts") private var collapsedRaw = ""
     @AppStorage("showReminders") private var showReminders = false
+    @AppStorage("appearance") private var appearance = "system"
+    @AppStorage("viewMode") private var viewMode = "overview"
+    @AppStorage("collapsedAccounts") private var collapsedRaw = ""
+
+    // Accounts named here are listed first, in this order. Anything else follows alphabetically.
+    private let accountOrder = ["iCloud"]
 
     private struct AccountGroup: Identifiable {
         let name: String
@@ -30,9 +33,6 @@ struct SidebarView: View {
     private enum GroupState {
         case none, some, all
     }
-
-    // Accounts named here are listed first, in this order. Anything else follows alphabetically.
-    private let accountOrder = ["iCloud"]
 
     private var groups: [AccountGroup] {
         let dict = Dictionary(grouping: calendar.calendars) { $0.source?.title ?? "Other" }
@@ -80,41 +80,6 @@ struct SidebarView: View {
             calendar.toggle(cal)
         }
     }
-    
-    private func calendarBinding(_ cal: EKCalendar) -> Binding<Bool> {
-        Binding(
-            get: { calendar.isVisible(cal) },
-            set: { _ in calendar.toggle(cal) }
-        )
-    }
-
-    @ViewBuilder
-    private func calendarRow(_ cal: EKCalendar) -> some View {
-        #if os(iOS)
-        HStack(spacing: 8) {
-            Circle()
-                .fill(Color(cgColor: cal.cgColor))
-                .frame(width: 10, height: 10)
-            Text(cal.title)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            Toggle("", isOn: calendarBinding(cal))
-                .labelsHidden()
-                .fixedSize()
-        }
-        .padding(.trailing, 2)
-        #else
-        Toggle(isOn: calendarBinding(cal)) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(Color(cgColor: cal.cgColor))
-                    .frame(width: 10, height: 10)
-                Text(cal.title)
-                    .lineLimit(1)
-            }
-        }
-        #endif
-    }
 
     private func groupCheckbox(_ group: AccountGroup) -> some View {
         let state = groupState(group)
@@ -139,6 +104,40 @@ struct SidebarView: View {
         .accessibilityLabel("Show or hide all calendars in \(group.name)")
     }
 
+    private func calendarBinding(_ cal: EKCalendar) -> Binding<Bool> {
+        Binding(
+            get: { calendar.isVisible(cal) },
+            set: { _ in calendar.toggle(cal) }
+        )
+    }
+
+    @ViewBuilder
+    private func calendarRow(_ cal: EKCalendar) -> some View {
+        #if os(iOS)
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color(cgColor: cal.cgColor))
+                .frame(width: 10, height: 10)
+            Text(cal.title)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Toggle("", isOn: calendarBinding(cal))
+                .labelsHidden()
+                .fixedSize()
+        }
+        #else
+        Toggle(isOn: calendarBinding(cal)) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color(cgColor: cal.cgColor))
+                    .frame(width: 10, height: 10)
+                Text(cal.title)
+                    .lineLimit(1)
+            }
+        }
+        #endif
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 10) {
@@ -153,19 +152,22 @@ struct SidebarView: View {
                 .labelsHidden()
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Range (months)")
-                    .font(.headline)
-                Picker("Range", selection: $months) {
-                    if oneMonthEnabled {
-                        Text("1").tag(1)
+            // Calendar is always a single month, so it has no range to choose.
+            if viewMode != "calendar" {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Range (months)")
+                        .font(.headline)
+                    Picker("Range", selection: $months) {
+                        if oneMonthEnabled {
+                            Text("1").tag(1)
+                        }
+                        Text("3").tag(3)
+                        Text("6").tag(6)
+                        Text("12").tag(12)
                     }
-                    Text("3").tag(3)
-                    Text("6").tag(6)
-                    Text("12").tag(12)
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -228,7 +230,7 @@ struct SidebarView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 6)
-                    .padding(.trailing, 6)
+                    .padding(.trailing, 2)
                     .padding(.vertical, 6)
                 }
                 .scrollClipDisabled()
