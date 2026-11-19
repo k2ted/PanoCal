@@ -55,9 +55,20 @@ struct PanoCalApp: App {
                 }
 
                 Divider()
-
+                
                 Toggle("Show Event Times", isOn: $showTimes)
                     .keyboardShortcut("e", modifiers: .command)
+            }
+            CommandMenu("Navigate") {
+                Button("Previous Month") {
+                    NotificationCenter.default.post(name: .stepMonth, object: -1)
+                }
+                .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+
+                Button("Next Month") {
+                    NotificationCenter.default.post(name: .stepMonth, object: 1)
+                }
+                .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
             }
         }
     }

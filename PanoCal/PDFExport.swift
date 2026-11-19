@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 
 extension Notification.Name {
     static let exportRequested = Notification.Name("PanoCalExportRequested")
+    static let stepMonth = Notification.Name("PanoCalStepMonth")
 }
 
 // A PDF the save dialog can write out.

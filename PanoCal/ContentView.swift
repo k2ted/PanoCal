@@ -120,6 +120,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
             exportPDF()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .stepMonth)) { note in
+            if let step = note.object as? Int {
+                shiftMonths(by: step)
+            }
+        }
         .fileExporter(
             isPresented: $showExporter,
             document: exportFile ?? PDFFile(data: Data()),
@@ -150,7 +155,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 topBar(proxy)
                 contentArea
-                    .modifier(SwipeModifier { shiftMonths(by: $0) })
+                    .modifier(SwipeModifier { shiftMonths(by: $0 * months) })
             }
             .onChange(of: calendar.weekStarts.first) { _, newFirst in
                 if let newFirst {
@@ -197,13 +202,13 @@ struct ContentView: View {
             }
 
             Button {
-                shiftMonths(by: -1)
+                shiftMonths(by: -months)
             } label: {
-                Label("Previous month", systemImage: "chevron.left")
+                Label("Previous", systemImage: "chevron.left")
                     .labelStyle(.iconOnly)
             }
             .keyboardShortcut(.leftArrow, modifiers: .command)
-            .help("Previous month")
+            .help(months == 1 ? "Previous month" : "Previous \(months) months")
 
             Button {
                 showJump.toggle()
@@ -224,13 +229,13 @@ struct ContentView: View {
             }
 
             Button {
-                shiftMonths(by: 1)
+                shiftMonths(by: months)
             } label: {
-                Label("Next month", systemImage: "chevron.right")
+                Label("Next", systemImage: "chevron.right")
                     .labelStyle(.iconOnly)
             }
             .keyboardShortcut(.rightArrow, modifiers: .command)
-            .help("Next month")
+            .help(months == 1 ? "Next month" : "Next \(months) months")
 
             Button("Today") {
                 goToCurrentMonth(proxy)
