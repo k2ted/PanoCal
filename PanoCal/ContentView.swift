@@ -171,6 +171,14 @@ struct ContentView: View {
             .help("Show or hide the sidebar")
             .keyboardShortcut("s", modifiers: [.command, .control])
 
+            Button {
+                exportPDF()
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+                    .labelStyle(.iconOnly)
+            }
+            .help("Export as PDF")
+
             Spacer()
 
             Button {
@@ -187,14 +195,6 @@ struct ContentView: View {
                     pick(event)
                 }
             }
-
-            Button {
-                exportPDF()
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
-                    .labelStyle(.iconOnly)
-            }
-            .help("Export as PDF")
 
             Button {
                 shiftMonths(by: -1)
