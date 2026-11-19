@@ -167,7 +167,7 @@ struct PlannerView: View {
             let rowGap: CGFloat = 2
             let count = CGFloat(max(starts.count, 1))
             let colW = (geo.size.width - outerPad * 2 - spacing * (count - 1)) / count
-            let rowH = max(18, (geo.size.height - outerPad * 2 - headerH - rowGap * 31) / 31)
+            let rowH = max(18, (geo.size.height - outerPad * 2 - headerH - rowGap * 31 - 2) / 31)
 
             let columns = HStack(alignment: .top, spacing: spacing) {
                 ForEach(starts, id: \.self) { monthStart in
@@ -183,6 +183,7 @@ struct PlannerView: View {
                 ScrollView(.vertical) {
                     columns
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
     }
