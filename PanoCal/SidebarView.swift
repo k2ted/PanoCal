@@ -9,7 +9,7 @@ import SwiftUI
 import EventKit
 
 // Set to true to bring back the single-month range option.
-let oneMonthEnabled = true
+let oneMonthEnabled = false
 
 struct SidebarView: View {
     let calendar: CalendarStore
@@ -137,6 +137,11 @@ struct SidebarView: View {
         }
         #endif
     }
+    
+    // The view the range picker currently applies to.
+    private var rangeViewName: String {
+        viewMode == "planner" ? "Planner" : "Overview"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -155,7 +160,7 @@ struct SidebarView: View {
             // Calendar is always a single month, so it has no range to choose.
             if viewMode != "calendar" {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Range (months)")
+                    Text("\(rangeViewName) range (months)")
                         .font(.headline)
                     Picker("Range", selection: $months) {
                         if oneMonthEnabled {
