@@ -44,7 +44,13 @@ struct ContentView: View {
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("viewMode") private var viewMode = "overview"
     @AppStorage("showReminders") private var showReminders = false
-    @State private var startMonth = ContentView.currentMonthStart()
+    
+    // Where each view is navigated to. Remembered only while the app is open.
+    @State private var sharedStart = ContentView.currentMonthStart()
+    @State private var overviewStart = ContentView.currentMonthStart()
+    @State private var plannerStart = ContentView.currentMonthStart()
+    @State private var calendarStart = ContentView.currentMonthStart()
+    
     @State private var showSidebar = false
     @State private var showSearch = false
     @State private var showJump = false
@@ -57,6 +63,44 @@ struct ContentView: View {
 
     private static func currentMonthStart() -> Date {
         Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+    }
+    
+    // The first month showing in the current view. With the switch off, all views share one.
+    private var startMonth: Date {
+        get {
+            guard perViewNavigationEnabled else { return sharedStart }
+            switch viewMode {
+            case "planner": return plannerStart
+            case "calendar": return calendarStart
+            default: return overviewStart
+            }
+        }
+        nonmutating set {
+            guard perViewNavigationEnabled else {
+                sharedStart = newValue
+                return
+            }
+            switch viewMode {
+            case "planner": plannerStart = newValue
+            case "calendar": calendarStart = newValue
+            default: overviewStart = newValue
+            }
+        }
+    }
+    
+    private var syncTitle: String {
+        "Set all views to " + startMonth.formatted(.dateTime.month(.abbreviated).year())
+    }
+
+    private var viewsInSync: Bool {
+        overviewStart == plannerStart && plannerStart == calendarStart
+    }
+
+    private func syncAllViews() {
+        let current = startMonth
+        overviewStart = current
+        plannerStart = current
+        calendarStart = current
     }
 
     // The range for whichever view is showing. Calendar is always a single month.
@@ -89,7 +133,13 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             if showSidebar {
-                SidebarView(calendar: calendar, months: monthsBinding)
+                SidebarView(
+                    calendar: calendar,
+                    months: monthsBinding,
+                    syncTitle: syncTitle,
+                    viewsInSync: viewsInSync,
+                    onSyncViews: { syncAllViews() }
+                )
                     .frame(width: 280)
                     .transition(.move(edge: .leading))
                 Divider()

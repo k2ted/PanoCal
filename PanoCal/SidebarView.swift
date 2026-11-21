@@ -10,11 +10,16 @@ import EventKit
 
 // Set to true to bring back the single-month range option.
 let oneMonthEnabled = false
+// Set to false if all views should share one start month instead of each remembering its own.
+let perViewNavigationEnabled = true
 
 struct SidebarView: View {
     let calendar: CalendarStore
     @Binding var months: Int
-
+    let syncTitle: String
+    let viewsInSync: Bool
+    let onSyncViews: () -> Void
+    
     @AppStorage("showEventTimes") private var showTimes = false
     @AppStorage("showReminders") private var showReminders = false
     @AppStorage("appearance") private var appearance = "system"
@@ -157,21 +162,34 @@ struct SidebarView: View {
                 .labelsHidden()
             }
 
-            // Calendar is always a single month, so it has no range to choose.
-            if viewMode != "calendar" {
+            if viewMode != "calendar" || perViewNavigationEnabled {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("\(rangeViewName) range (months)")
-                        .font(.headline)
-                    Picker("Range", selection: $months) {
-                        if oneMonthEnabled {
-                            Text("1").tag(1)
+                    // Calendar is always a single month, so it has no range to choose.
+                    if viewMode != "calendar" {
+                        Text("\(rangeViewName) range (months)")
+                            .font(.headline)
+                        Picker("Range", selection: $months) {
+                            if oneMonthEnabled {
+                                Text("1").tag(1)
+                            }
+                            Text("3").tag(3)
+                            Text("6").tag(6)
+                            Text("12").tag(12)
                         }
-                        Text("3").tag(3)
-                        Text("6").tag(6)
-                        Text("12").tag(12)
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+
+                    if perViewNavigationEnabled {
+                        Button {
+                            onSyncViews()
+                        } label: {
+                            Label(syncTitle, systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewsInSync)
+                        .help("Move the other views to the same first month as this one")
+                    }
                 }
             }
 
